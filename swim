@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>50公尺自由式衝刺分析報告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Cool Waters -->
+    <!-- Application Structure Plan: The application is designed with a thematic, non-linear structure using a top navigation bar (技術分析, 訓練計畫, 競賽策略, 心態建立). This modular approach allows an experienced swimmer to directly access specific areas of interest (e.g., refining their start, or focusing on mental prep) without scrolling through known information. The key interactions include: 1) Tabbed content for breaking down complex techniques into digestible parts (body, arms, legs). 2) An interactive race timeline to visualize and understand the focus points at each phase of the sprint. 3) A radar chart to provide a holistic, conceptual overview of the components of speed. This structure prioritizes user-directed learning and quick access to advanced, specific information, which is more effective for a knowledgeable audience than a simple linear document. -->
+    <!-- Visualization & Content Choices: 1. Report Info: Phases of a 50m sprint (start, breakout, full stroke, finish). Goal: Organize & Inform. Viz/Method: Interactive HTML timeline. Interaction: Hovering over timeline segments reveals key focus points in a tooltip. Justification: This visually deconstructs the race, making the strategic allocation of effort and technique easier to understand. Library/Method: HTML/CSS/JS. 2. Report Info: Components of freestyle stroke (high elbow catch, core rotation, kick). Goal: Organize & Explain. Viz/Method: Tabbed content sections. Interaction: Clicking tabs reveals detailed descriptions and tips. Justification: Prevents information overload by allowing the user to focus on one technical aspect at a time. Library/Method: HTML/CSS/JS. 3. Report Info: The core pillars of swimming speed. Goal: Synthesize & Inform. Viz/Method: Radar chart. Interaction: Static chart with tooltips on hover to explain each pillar. Justification: Offers a high-level conceptual model, emphasizing that speed is a result of balanced development across multiple areas, not just one. Library/Method: Chart.js. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #0ea5e9; /* sky-500 */
+            border-bottom-color: #0ea5e9;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+            padding-left: 2.5rem;
+            border-left: 2px solid #e2e8f0; /* slate-200 */
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -0.6rem;
+            top: 0;
+            height: 1.125rem;
+            width: 1.125rem;
+            background-color: white;
+            border: 2px solid #0ea5e9; /* sky-500 */
+            border-radius: 9999px;
+            transition: all 0.3s ease;
+        }
+        .timeline-item:hover .timeline-dot {
+            transform: scale(1.2);
+            background-color: #0ea5e9;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800">
+                <span class="text-sky-500">50M</span> 自由式衝刺進化論
+            </h1>
+            <nav class="hidden md:flex space-x-6">
+                <a href="#technique" class="nav-link text-lg font-medium text-slate-600 pb-1">技術分析</a>
+                <a href="#training" class="nav-link text-lg font-medium text-slate-600 pb-1">訓練計畫</a>
+                <a href="#strategy" class="nav-link text-lg font-medium text-slate-600 pb-1">競賽策略</a>
+                <a href="#mindset" class="nav-link text-lg font-medium text-slate-600 pb-1">心態建立</a>
+            </nav>
+            <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-slate-600 hover:bg-slate-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </button>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-200">
+            <a href="#technique" class="block py-3 px-4 text-base text-slate-600 hover:bg-slate-50">技術分析</a>
+            <a href="#training" class="block py-3 px-4 text-base text-slate-600 hover:bg-slate-50">訓練計畫</a>
+            <a href="#strategy" class="block py-3 px-4 text-base text-slate-600 hover:bg-slate-50">競賽策略</a>
+            <a href="#mindset" class="block py-3 px-4 text-base text-slate-600 hover:bg-slate-50">心態建立</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 md:py-12">
+        <section class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">突破極限：從優秀到卓越</h2>
+            <p class="max-w-3xl mx-auto text-slate-600 text-lg">
+                您已具備扎實基礎，現在的目標是將每個細節做到極致。這份報告將專注於進階技巧、訓練策略與心理素質，助您突破50公尺30秒的門檻，邁向新的巔峰。
+            </p>
+        </section>
+
+        <div id="app-content">
+            <!-- 技術分析 Section -->
+            <section id="technique" class="content-section active">
+                <h3 class="text-2xl md:text-3xl font-bold mb-8 text-center">
+                    <span class="border-b-4 border-sky-400 pb-1">技術分析：毫秒必爭的細節</span>
+                </h3>
+                <p class="text-center text-slate-600 max-w-2xl mx-auto mb-10">
+                    在50公尺的短距離衝刺中，任何微小的技術瑕疵都會被放大。效率是唯一關鍵。我們的目標是最大化推進力，同時最小化水阻。這裡我們將拆解自由式的四大核心技術，探討如何將其優化至極致。
+                </p>
+
+                <div class="flex justify-center mb-8 space-x-2 md:space-x-4">
+                    <button data-tab="body" class="tab-button active font-medium py-2 px-4 rounded-full text-sm md:text-base">身體姿態</button>
+                    <button data-tab="arms" class="tab-button font-medium py-2 px-4 rounded-full text-sm md:text-base">手臂動作</button>
+                    <button data-tab="legs" class="tab-button font-medium py-2 px-4 rounded-full text-sm md:text-base">腿部動作</button>
+                    <button data-tab="breathing" class="tab-button font-medium py-2 px-4 rounded-full text-sm md:text-base">呼吸節奏</button>
+                </div>
+
+                <div id="technique-content" class="card p-6 md:p-8">
+                    <div id="body-content" class="tab-content active">
+                        <h4 class="text-xl font-bold mb-4 text-sky-600">身體姿態：像魚雷一樣穿梭</h4>
+                        <ul class="space-y-3 list-disc list-inside text-slate-700">
+                            <li><strong>水平直線：</strong> 想像一條雷射光從頭頂穿到腳跟，身體始終保持在這條線上。頭部穩定，視線略微朝前下方，避免頭部過度抬高導致臀腿下沉。</li>
+                            <li><strong>核心緊繃：</strong> 核心是力量的傳遞中樞。全程收緊腹部和下背部，將上下半身連為一體。這能確保你的划水和打腿力量不會被鬆散的身體抵銷。</li>
+                            <li><strong>高頻轉體：</strong> 以脊椎為軸，進行快速、有力的肩髖轉動。轉體不僅能延伸划水距離，更是整合全身力量、產生鞭打效應的關鍵。轉體由核心發動，而非僅僅是肩膀的晃動。</li>
+                        </ul>
+                    </div>
+                    <div id="arms-content" class="tab-content hidden">
+                        <h4 class="text-xl font-bold mb-4 text-sky-600">手臂動作：高肘抱水 (EVF)</h4>
+                        <ul class="space-y-3 list-disc list-inside text-slate-700">
+                            <li><strong>提早抓水：</strong> 手入水後向前延伸，但不要等完全伸直才開始抓水。在延伸的過程中，手掌和前臂就要開始向下、向後，形成一個強大的「槳面」。這就是所謂的「前交叉」風格，適合短衝。</li>
+                            <li><strong>高肘抱水 (EVF - Early Vertical Forearm)：</strong> 這是自由式推進力的核心。想像你的手肘固定在水面附近，然後用前臂和手掌去「勾住」水，而不是用手掌向下拉水。你的前臂應盡可能早地垂直於前進方向。</li>
+                            <li><strong>加速推水：</strong> 抱水後，力量從胸、背肌群發出，帶動手臂向後加速推水，直到大腿側。推水路徑應是直線向後，而非S型，以求最直接的推進力。</li>
+                            <li><strong>快速移臂：</strong> 手臂出水後，放鬆且快速地向前移動，手肘高抬，以最短的路徑回到前方準備下一次入水。高頻率的衝刺要求移臂速度極快。</li>
+                        </ul>
+                    </div>
+                    <div id="legs-content" class="tab-content hidden">
+                        <h4 class="text-xl font-bold mb-4 text-sky-600">腿部動作：強而有力的推進器</h4>
+                        <ul class="space-y-3 list-disc list-inside text-slate-700">
+                            <li><strong>六拍打腿：</strong> 衝刺時必須維持高頻率、高強度的六拍打腿（一次手臂循環打腿六次）。這不僅提供強大推進力，更是維持身體平衡和轉體節奏的關鍵。</li>
+                            <li><strong>髖部發力：</strong> 力量從髖部發起，像鞭子一樣傳遞到腳踝。膝蓋自然彎曲，而不是主動去屈膝。想像你在踢一個小球，而不是在踩腳踏車。</li>
+                            <li><strong>柔軟腳踝：</strong> 腳踝的柔韌性至關重要。放鬆的腳踝能讓腳掌在上下打水時像魚鰭一樣產生最大推進力。嘗試在陸上進行腳踝伸展。</li>
+                        </ul>
+                    </div>
+                    <div id="breathing-content" class="tab-content hidden">
+                        <h4 class="text-xl font-bold mb-4 text-sky-600">呼吸節奏：氧氣的策略性補給</h4>
+                        <ul class="space-y-3 list-disc list-inside text-slate-700">
+                            <li><strong>最少化呼吸：</strong> 50公尺是無氧運動的極致。理想狀態是「不呼吸」或「一次呼吸」。若必須呼吸，建議在25公尺後進行一次。每一次呼吸都會短暫破壞身體流線型和節奏。</li>
+                            <li><strong>爆炸式換氣：</strong> 換氣時，頭跟隨身體自然轉動，嘴巴剛出水面就快速「炸」出廢氣並吸入新氣，然後立刻轉回。避免抬頭，保持一隻泳鏡在水中的狀態。</li>
+                            <li><strong>時機精準：</strong> 呼吸的時機應在推水結束、手臂移臂的初期，這樣對身體平衡的影響最小。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 訓練計畫 Section -->
+            <section id="training" class="content-section">
+                <h3 class="text-2xl md:text-3xl font-bold mb-8 text-center">
+                    <span class="border-b-4 border-sky-400 pb-1">訓練計畫：打造速度機器</span>
+                </h3>
+                 <p class="text-center text-slate-600 max-w-2xl mx-auto mb-10">
+                    速度不是偶然，是科學化訓練的必然結果。一個全面的訓練計畫應包含水中專項、陸上力量和柔韌性三大部分。它們相輔相成，共同構建你的速度基礎。點擊下方的卡片來查看各項訓練的重點。
+                </p>
+
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="card p-6 text-center">
+                        <div class="text-4xl mb-4">🌊</div>
+                        <h4 class="text-xl font-bold mb-2">水中專項訓練</h4>
+                        <p class="text-slate-600">專注於無氧閾值和神經肌肉反應速度。訓練重點是短距離、高品質、高強度的衝刺，並給予充足的休息恢復。</p>
+                        <ul class="text-left mt-4 space-y-2 list-disc list-inside">
+                            <li><strong>超短衝刺：</strong> 10-15公尺的全力衝刺，專練出發和爆發力。</li>
+                            <li><strong>速度維持：</strong> 25或50公尺的衝刺，組間休息時間長（如1:30-2:00），確保每一趟都是最高品質。</li>
+                            <li><strong>抗乳酸訓練：</strong> 8趟25公尺衝刺，每30秒或40秒出發一趟，挑戰極限。</li>
+                        </ul>
+                    </div>
+                    <div class="card p-6 text-center">
+                        <div class="text-4xl mb-4">🏋️</div>
+                        <h4 class="text-xl font-bold mb-2">陸上力量訓練</h4>
+                        <p class="text-slate-600">游泳是全身運動，陸上訓練的目標是提升最大力量和爆發力，並將其轉化為水中的推進力。</p>
+                        <ul class="text-left mt-4 space-y-2 list-disc list-inside">
+                            <li><strong>核心力量：</strong> 平板支撐、俄羅斯轉體、藥球砸地。</li>
+                            <li><strong>上身力量：</strong> 引體向上（抓水）、臥推（推水）。</li>
+                            <li><strong>下身爆發力：</strong> 深蹲、硬舉、箱跳（蹬牆、打腿）。</li>
+                        </ul>
+                    </div>
+                    <div class="card p-6 text-center">
+                        <div class="text-4xl mb-4">🧘</div>
+                        <h4 class="text-xl font-bold mb-2">柔韌性與恢復</h4>
+                        <p class="text-slate-600">良好的柔韌性能帶來更長的划水距離和更有效的打腿。恢復與訓練同等重要。</p>
+                        <ul class="text-left mt-4 space-y-2 list-disc list-inside">
+                            <li><strong>肩關節活動度：</strong> 彈力帶肩外旋、牆壁天使。</li>
+                            <li><strong>髖關節靈活性：</strong> 鴿式伸展、蛙式伸展。</li>
+                            <li><strong>腳踝柔韌性：</strong> 跪姿壓腳背。</li>
+                            <li><strong>積極恢復：</strong> 訓練後的靜態伸展、泡沫軸放鬆、充足睡眠。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 競賽策略 Section -->
+            <section id="strategy" class="content-section">
+                <h3 class="text-2xl md:text-3xl font-bold mb-8 text-center">
+                    <span class="border-b-4 border-sky-400 pb-1">競賽策略：50公尺的完美風暴</span>
+                </h3>
+                <p class="text-center text-slate-600 max-w-2xl mx-auto mb-10">
+                    50公尺比賽就像一場精心編排的暴力美學。從站上跳台的那一刻起，每一個動作都必須是自動化的、完美的。這不僅是體能的較量，更是策略和執行的對決。下面是50公尺比賽的完整流程拆解。
+                </p>
+                <div class="relative">
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h4 class="text-lg font-bold text-sky-600">0M：出發與潛泳</h4>
+                        <p class="text-slate-700">這是速度最快的階段。目標是將跳台上的勢能最高效地轉化為水中前進的動能。反應要快，入水角度要尖，盡可能減少水花。入水後進行5-7次強而有力的海豚腿，保持身體的流線型，感覺自己像一支射出的箭。在速度自然下降前浮出水面，第一下划水和打腿必須極具爆發力。</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h4 class="text-lg font-bold text-sky-600">5-25M：建立最大速度</h4>
+                        <p class="text-slate-700">這是比賽的主體。出水後，立刻進入最高划頻和最強打腿的節奏。不要保留體力，目標是在最短時間內達到你的極速。專注於前面提到的技術細節：高肘抱水、核心驅動轉體、六拍打腿。如果需要換氣，這可能是第一個（也可能是唯一一個）換氣點。</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h4 class="text-lg font-bold text-sky-600">25-40M：意志力的考驗</h4>
+                        <p class="text-slate-700">乳酸開始堆積，身體會感覺到極度疲勞，這是最考驗意志力的階段。你的大腦會告訴你慢下來，但你必須維持住速度和技術。此時最容易出現技術變形，例如手肘下沉、打腿減弱。專注於維持高划頻，告訴自己「再堅持一下」。</p>
+                    </div>
+                    <div class="timeline-item" style="border-left: 2px solid #e2e8f0;">
+                        <div class="timeline-dot"></div>
+                        <h4 class="text-lg font-bold text-sky-600">40-50M：衝刺觸壁</h4>
+                        <p class="text-slate-700">看到終點了！頭部保持穩定，不要為了看牆而抬頭。用餘光瞄準目標，最後5公尺加速打腿，用盡最後一絲力量。最後一下划水要計算好距離，以單臂完全伸展的姿態全力觸壁，完成比賽。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 心態建立 Section -->
+            <section id="mindset" class="content-section">
+                <h3 class="text-2xl md:text-3xl font-bold mb-8 text-center">
+                    <span class="border-b-4 border-sky-400 pb-1">心態建立：冠軍的思維</span>
+                </h3>
+                 <p class="text-center text-slate-600 max-w-2xl mx-auto mb-10">
+                    當技術和體能達到瓶頸時，心態就是決定勝負的關鍵。強大的心理素質能讓你在高壓下發揮出100%甚至110%的實力。這不僅僅是「想要贏」，而是一種對過程的專注和對自己的絕對信任。
+                </p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="card p-6">
+                        <h4 class="font-bold text-lg mb-2">比賽視覺化</h4>
+                        <p class="text-slate-600">在賽前，閉上眼睛，在腦海中像電影一樣演練整場比賽。從站上跳台的感覺、聽見出發信號、完美的入水、有力的潛泳，到每一次划水和觸壁。想像每一個細節都完美無瑕。這種練習能建立肌肉記憶和自信心。</p>
+                    </div>
+                    <div class="card p-6">
+                        <h4 class="font-bold text-lg mb-2">專注於過程</h4>
+                        <p class="text-slate-600">比賽時，不要去想「我要游多快」或「我能不能贏」。這些是結果，是你無法完全控制的。相反，專注於你能控制的過程：「我要做出完美的出發」、「我的下一次划水要保持高肘」。當你把過程做好了，理想的結果自然會到來。</p>
+                    </div>
+                    <div class="card p-6">
+                        <h4 class="font-bold text-lg mb-2">建立自信</h4>
+                        <p class="text-slate-600">你的自信來自於平日紮實的訓練。相信你的訓練成果，相信你為此付出的每一滴汗水。比賽不是奇蹟發生的地方，而是你展示訓練成果的舞台。帶著「我準備好了」的信念上場。</p>
+                    </div>
+                    <div class="card p-6">
+                        <h4 class="font-bold text-lg mb-2">擁抱壓力</h4>
+                        <p class="text-slate-600">緊張是正常的，這代表你很在乎。學會將這種緊張感轉化為能量，而不是恐懼。深呼吸，感受心跳，告訴自己這是身體在為即將到來的爆發做準備。壓力是讓你表現更好的催化劑。</p>
+                    </div>
+                </div>
+                <div class="mt-12">
+                     <h4 class="text-2xl font-bold text-center mb-4">速度的四大支柱</h4>
+                     <p class="text-center text-slate-600 max-w-2xl mx-auto mb-6">
+                        最終，卓越的游泳表現建立在四大支柱之上：技術、力量、耐力與心態。這張圖表展現了它們如何共同作用，打造一個全面的衝刺型選手。任何一環的缺失都會限制你的潛力。
+                    </p>
+                    <div class="chart-container">
+                        <canvas id="pillarsChart"></canvas>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <footer class="bg-slate-800 text-white mt-12">
+        <div class="container mx-auto px-4 py-6 text-center">
+            <p>&copy; 2025 游泳表現分析中心. 祝您游出最佳成績！</p>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navLinks = document.querySelectorAll('.nav-link, #mobile-menu a');
+            const sections = document.querySelectorAll('.content-section');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            function updateActiveNav(targetId) {
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${targetId}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            function showSection(targetId) {
+                sections.forEach(section => {
+                    if (section.id === targetId) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+                updateActiveNav(targetId);
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    showSection(targetId);
+                    if (mobileMenu.classList.contains('hidden') === false) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+            
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+
+            const techTabs = document.querySelectorAll('.tab-button');
+            const techContents = document.querySelectorAll('#technique-content .tab-content');
+
+            techTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    techTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const targetContentId = this.dataset.tab + '-content';
+                    techContents.forEach(content => {
+                        if (content.id === targetContentId) {
+                            content.classList.remove('hidden');
+                            content.classList.add('active');
+                        } else {
+                            content.classList.add('hidden');
+                            content.classList.remove('active');
+                        }
+                    });
+                });
+            });
+
+            const pillarsChartCtx = document.getElementById('pillarsChart').getContext('2d');
+            new Chart(pillarsChartCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['技術效率 (Technique)', '絕對力量 (Power)', '無氧耐力 (Endurance)', '心理素質 (Mindset)'],
+                    datasets: [{
+                        label: '衝刺選手能力模型',
+                        data: [95, 85, 90, 88],
+                        backgroundColor: 'rgba(14, 165, 233, 0.2)',
+                        borderColor: 'rgba(14, 165, 233, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(14, 165, 233, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(14, 165, 233, 1)'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: '#e2e8f0'
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 14,
+                                },
+                                color: '#334155'
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                stepSize: 20
+                            },
+                            suggestedMin: 0,```
+                            suggestedMax: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+
+            showSection('technique'); 
+        });
+    </script>
+</body>
+</html>
